@@ -38,6 +38,7 @@ func (s *Server) RunServer(){
 		votedFor:-1,
 		role:Follower,
 		server:s,
+		crash:false,
 	}
 	s.ConsensusModule =ConsensusModule
 	s.rpcServer = rpc.NewServer()
@@ -86,7 +87,7 @@ func (s *Server) ConnectToPeer(peerId int,addr string) error{
 			return err
 		}
 		s.peerServers[peerId] = client
-		s.ConsensusModule.peerIds = append(s.ConsensusModule.peerIds,peerId)
+		//s.ConsensusModule.peerIds = append(s.ConsensusModule.peerIds,peerId)
 		//fmt.Printf("Dial")
 	}
 	return nil

@@ -44,6 +44,8 @@ func run(server *raft.Server){
 		log.Printf("connect success from %d to %d",server.Id,peerId)
 	}
 
+	time.Sleep(2 * time.Second)
+
 	server.CMStart()
 	wg.Wait()
 	select{}

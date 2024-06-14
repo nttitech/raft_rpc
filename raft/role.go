@@ -14,7 +14,7 @@ func (r *RaftState) becomeLeader(){
 	r.role = Leader
 	r.dlog("is leader")
 	go func() {
-		ticker := time.NewTicker(160 * time.Millisecond)
+		ticker := time.NewTicker(50 * time.Millisecond)
 		defer ticker.Stop()
 		startTime := time.Now()
 
@@ -24,16 +24,19 @@ func (r *RaftState) becomeLeader(){
 			elapsed := time.Since(startTime)
 			if elapsed > 500*time.Millisecond{
 				r.dlog("sleep")
+				r.crash = true
 				time.Sleep(time.Millisecond * 1001)
 				r.dlog("active")
+				r.crash = false
+				startTime = time.Now()
 			}
 
-			r.mu.Lock()
+			// r.mu.Lock()
+			// defer r.mu.Unlock()
 			if r.role != Leader {
-				r.mu.Unlock()
 				return
 			}
-			r.mu.Unlock()
+
 		}
 	}()
 	// time.Sleep(time.Millisecond * 200)

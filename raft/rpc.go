@@ -2,6 +2,7 @@ package raft
 
 import(
 	"time"
+	"fmt"
 )
 
 type RequestVoteArgs struct{
@@ -34,19 +35,34 @@ func (r *RaftState) RequestVote(args RequestVoteArgs,reply *RequestVoteReply) er
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	//r.dlog("is received requestVote,args.Term:%d,r.currentTerm:%d,r.votedfor:%d,args.CandidateId:%d",args.Term,r.currentTerm,r.votedFor,args.CandidateId)
-	if args.Term > r.currentTerm && (r.votedFor == -1 || r.votedFor == args.CandidateId){
+	if r.crash {
+		return fmt.Errorf("server is temporarily unavailable")
+	}
+
+	if args.Term > r.currentTerm{
 		r.becomeFollower(args.Term)
+	}
+	//r.dlog("is received requestVote,args.Term:%d,r.currentTerm:%d,r.votedfor:%d,args.CandidateId:%d",args.Term,r.currentTerm,r.votedFor,args.CandidateId)
+	if args.Term == r.currentTerm && (r.votedFor == -1 || r.votedFor == args.CandidateId ){
 		reply.Term = r.currentTerm
 		reply.VoteGranted = true
 		r.votedFor = args.CandidateId
 		r.dlog("vote for %d",r.votedFor)
 		return  nil
+	} else{
+		reply.Term = r.currentTerm
+		reply.VoteGranted = false
 	}
 	return nil
 }
 
 func (r *RaftState) AppendEntry(args AppendEntryArgs,reply *AppendEntryReply) error{
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.crash {
+		return fmt.Errorf("server is temporarily unavailable")
+	}
+
 	if args.Term > r.currentTerm{
 		r.becomeFollower(args.Term)
 		return nil
@@ -56,8 +72,7 @@ func (r *RaftState) AppendEntry(args AppendEntryArgs,reply *AppendEntryReply) er
 		reply.Term = r.currentTerm
 		return nil
 	}
-	r.mu.Lock()
-	defer r.mu.Unlock()
+
 	if args.Term > r.currentTerm{
 		r.becomeFollower(args.Term)
 	}
