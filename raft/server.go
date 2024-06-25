@@ -6,6 +6,7 @@ import(
 	"net"
 	"net/rpc"
 	"strconv"
+	//"io"
 )
 
 type Server struct{
@@ -36,9 +37,17 @@ func (s *Server) RunServer(){
 		peerIds:s.PeerIds,
 		currentTerm:0,
 		votedFor:-1,
+		commitIndex:-1,
+		lastApplied:-1,
 		role:Follower,
 		server:s,
 		crash:false,
+		nextIndex:make(map[int]int),
+		matchIndex:make(map[int]int),
+	}
+	for _,peerId := range s.PeerIds{
+		ConsensusModule.nextIndex[peerId]=0
+		ConsensusModule.matchIndex[peerId]=0
 	}
 	s.ConsensusModule =ConsensusModule
 	s.rpcServer = rpc.NewServer()
@@ -52,18 +61,47 @@ func (s *Server) RunServer(){
 		log.Fatal(err)
 	}
 	//fmt.Printf("make new server")
-	go func(){
-			for{
-			conn, err:=s.listener.Accept()
-			if err != nil{
-				log.Fatal(err)
-			}
+	go func() {
+        for {
+            conn, err := s.listener.Accept()
+            if err != nil {
+                log.Fatal(err)
+            }
 
-			go s.rpcServer.ServeConn(conn)
-			//fmt.Printf("complete connection")
+            
+			go  s.rpcServer.ServeConn(conn)
+	// 		go func(conn net.Conn){
+	// 			go  s.rpcServer.ServeConn(conn)
+	// 			data := make([]byte, 1024)
+	// 			for {
+	// 				count, err := conn.Read(data)
+	// 				if err != nil {
+	// 					if err != io.EOF {
+	// 						log.Println("Read error:", err)
+	// 					}
+	// 					break
+	// 				}
+	// 				s.ConsensusModule.receiveCommand(string(data[:count]))
+	// 			}
+	// 		}(conn)
+    //     }
+	// }()
+
+	// go func(){
+	// 		for{
+	// 		conn, err:=s.listener.Accept()
+	// 		if err != nil{
+	// 			log.Fatal(err)
+	// 		}
+
+	// 		data := make([]byte,1024)
+	// 		go s.rpcServer.ServeConn(conn)
+	// 		//fmt.Printf("complete connection")
+	// 		count,_ := conn.Read(data)
+	// 		s.ConsensusModule.receiveCommand(string(data[:count]))
 		}
-	}()	
 
+	 }()	
 }
 
 func (s *Server) ShutDown(){

@@ -13,7 +13,11 @@ type RaftState struct{
 
 	currentTerm int
 	votedFor int
-	//log []LogEntry
+	log []LogEntry
+	commitIndex int
+	lastApplied int
+	nextIndex map[int]int
+	matchIndex map[int]int
 
 	role Role
 	electionResetEvent time.Time
@@ -36,7 +40,7 @@ func (r *RaftState) runElectionTimer(){
 	r.mu.Lock()
 	termStarted := r.currentTerm
 	r.mu.Unlock()
-	r.dlog("election timerstarted (%v), term=%d", timeoutDuration, termStarted)
+	//r.dlog("election timerstarted (%v), term=%d", timeoutDuration, termStarted)
 
 	ticker:= time.NewTicker(10 * time.Millisecond)
 	defer ticker.Stop()
@@ -97,7 +101,7 @@ func (r *RaftState) StartElection(){
 			r.mu.Lock()
 			defer r.mu.Unlock()
 			if r.role != Candidate{
-				r.dlog("role has changed from Candidate to %v",r.role)
+				//r.dlog("role has changed from Candidate to %v",r.role)
 				return
 			}
 			if reply.Term > r.currentTerm{
@@ -121,7 +125,7 @@ func (r *RaftState) StartElection(){
 	}
 
 	go r.runElectionTimer()
-	r.dlog(" Run another election timer, in case this election is not successful at term %d",r.currentTerm)
+	//r.dlog(" Run another election timer, in case this election is not successful at term %d",r.currentTerm)
 }
 
 func (r *RaftState) LeaderSendHeartbeats(){
@@ -143,3 +147,53 @@ func (r *RaftState) LeaderSendHeartbeats(){
 		}
 }
 
+func (r *RaftState) ReceiveCommand(Command string,Reply string){
+	if r.role == Leader{
+		LogEntry := LogEntry{
+			Term:r.currentTerm,
+			Command:Command,
+		}
+		r.log = append(r.log,LogEntry)
+
+		for _,peerId := range r.peerIds{
+			args := &AppendEntryArgs{
+				Term:r.currentTerm,
+				LeaderId:r.id,
+				PrevLogIndex:len(r.log)-2,
+				PrevLogTerm:r.log[len(r.log)-2].Term,
+				Entries:r.log[r.nextIndex[peerId]:],
+				LeaderCommit:r.commitIndex,
+			}
+			var reply AppendEntryReply
+			for {
+				err:=r.server.Call(peerId,"ConsensusModule.AppendEntry",args,&reply)
+				if err !=nil {
+					//r.dlog("AppendEntry fail from %d",peerId)
+				}
+				if reply.Success{
+					r.nextIndex[peerId] += 1
+					r.matchIndex[peerId] += 1
+					r.dlog("has log entry:%v",r.log)
+					break;
+				}else{
+					args.PrevLogIndex -= 1
+					args.PrevLogTerm = r.log[args.PrevLogIndex].Term
+					args.Entries = r.log[r.nextIndex[peerId]:]
+					r.nextIndex[peerId] -= 1
+				}
+			}
+		}
+	}
+}
+
+func(r *RaftState) checkConsistensy(args AppendEntryArgs) bool{
+	if args.PrevLogIndex != len(r.log) - 1{
+		return false
+	}
+
+	if args.PrevLogTerm != r.log[len(r.log)-2].Term{
+		return false
+	}
+
+	return true
+}

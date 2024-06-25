@@ -17,13 +17,18 @@ type RequestVoteReply struct{
 	VoteGranted bool
 }
 
+type LogEntry struct{
+	Term int
+	Command string
+}
+
 type AppendEntryArgs struct{
 	Term     int
 	LeaderId int
 
 	PrevLogIndex int
 	PrevLogTerm  int
-	//Entries      []LogEntry
+	Entries      []LogEntry
 	LeaderCommit int
 }
 type AppendEntryReply struct{
@@ -59,6 +64,15 @@ func (r *RaftState) RequestVote(args RequestVoteArgs,reply *RequestVoteReply) er
 func (r *RaftState) AppendEntry(args AppendEntryArgs,reply *AppendEntryReply) error{
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if args.Entries != nil{
+		if r.checkConsistensy(args){
+			r.log = append(r.log)
+			reply.Success = true
+		}else{
+			reply.Success = false
+		}
+		return nil
+	}
 	if r.crash {
 		return fmt.Errorf("server is temporarily unavailable")
 	}

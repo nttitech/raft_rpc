@@ -12,24 +12,28 @@ const(
 
 func (r *RaftState) becomeLeader(){
 	r.role = Leader
+	for _,peerId := range r.peerIds{
+		r.nextIndex[peerId] = len(r.log)
+		r.matchIndex[peerId] = -1
+	}
 	r.dlog("is leader")
 	go func() {
 		ticker := time.NewTicker(50 * time.Millisecond)
 		defer ticker.Stop()
-		startTime := time.Now()
+		//startTime := time.Now()
 
 		for {
 			r.LeaderSendHeartbeats()
 			<-ticker.C
-			elapsed := time.Since(startTime)
-			if elapsed > 500*time.Millisecond{
-				r.dlog("sleep")
-				r.crash = true
-				time.Sleep(time.Millisecond * 1001)
-				r.dlog("active")
-				r.crash = false
-				startTime = time.Now()
-			}
+			// elapsed := time.Since(startTime)
+			// if elapsed > 500*time.Millisecond{
+			// 	r.dlog("sleep")
+			// 	r.crash = true
+			// 	time.Sleep(time.Millisecond * 1001)
+			// 	r.dlog("active")
+			// 	r.crash = false
+			// 	startTime = time.Now()
+			// }
 
 			// r.mu.Lock()
 			// defer r.mu.Unlock()
