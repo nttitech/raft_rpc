@@ -13,14 +13,14 @@ func main(){
 	if err != nil{
 		log.Printf("connect fail")
 	}
-	Command := os.Args[2]
+	command := os.Args[2]
 	// data := []byte(command)
 	// _,err = conn.Write(data)
 	// if err != nil{
 	// 	log.Printf("can not write")
 	// }
-	var Reply string
-	err =client.Call("ConsensusModule.ReceiveCommand",Command,&Reply)
+	var reply string
+	err =client.Call("ConsensusModule.ReceiveCommand",&command,&reply)
 	if err !=nil {
 		log.Printf("can not send command")
 	}

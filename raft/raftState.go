@@ -147,22 +147,27 @@ func (r *RaftState) LeaderSendHeartbeats(){
 		}
 }
 
-func (r *RaftState) ReceiveCommand(Command string,Reply string){
+func (r *RaftState) ReceiveCommand(command *string,reply *string) error{
 	if r.role == Leader{
 		LogEntry := LogEntry{
 			Term:r.currentTerm,
-			Command:Command,
+			Command:*command,
 		}
 		r.log = append(r.log,LogEntry)
-
+		r.dlog("has log entry:%v",r.log)
 		for _,peerId := range r.peerIds{
 			args := &AppendEntryArgs{
 				Term:r.currentTerm,
 				LeaderId:r.id,
 				PrevLogIndex:len(r.log)-2,
-				PrevLogTerm:r.log[len(r.log)-2].Term,
+				//PrevLogTerm:r.log[len(r.log)-2].Term,
 				Entries:r.log[r.nextIndex[peerId]:],
 				LeaderCommit:r.commitIndex,
+			}
+			if args.PrevLogIndex == -1{
+				args.PrevLogTerm = -1
+			}else{
+				args.PrevLogTerm = r.log[args.PrevLogIndex].Term
 			}
 			var reply AppendEntryReply
 			for {
@@ -173,7 +178,7 @@ func (r *RaftState) ReceiveCommand(Command string,Reply string){
 				if reply.Success{
 					r.nextIndex[peerId] += 1
 					r.matchIndex[peerId] += 1
-					r.dlog("has log entry:%v",r.log)
+					//r.dlog("has log entry:%v",r.log)
 					break;
 				}else{
 					args.PrevLogIndex -= 1
@@ -184,14 +189,19 @@ func (r *RaftState) ReceiveCommand(Command string,Reply string){
 			}
 		}
 	}
+	return nil
 }
 
 func(r *RaftState) checkConsistensy(args AppendEntryArgs) bool{
+	if args.PrevLogIndex == -1 && len(r.log) == 0{
+		return true
+	}
+
 	if args.PrevLogIndex != len(r.log) - 1{
 		return false
 	}
 
-	if args.PrevLogTerm != r.log[len(r.log)-2].Term{
+	if args.PrevLogTerm != r.log[len(r.log)-1].Term{
 		return false
 	}
 

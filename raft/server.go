@@ -6,7 +6,6 @@ import(
 	"net"
 	"net/rpc"
 	"strconv"
-	//"io"
 )
 
 type Server struct{
@@ -70,35 +69,6 @@ func (s *Server) RunServer(){
 
             
 			go  s.rpcServer.ServeConn(conn)
-	// 		go func(conn net.Conn){
-	// 			go  s.rpcServer.ServeConn(conn)
-	// 			data := make([]byte, 1024)
-	// 			for {
-	// 				count, err := conn.Read(data)
-	// 				if err != nil {
-	// 					if err != io.EOF {
-	// 						log.Println("Read error:", err)
-	// 					}
-	// 					break
-	// 				}
-	// 				s.ConsensusModule.receiveCommand(string(data[:count]))
-	// 			}
-	// 		}(conn)
-    //     }
-	// }()
-
-	// go func(){
-	// 		for{
-	// 		conn, err:=s.listener.Accept()
-	// 		if err != nil{
-	// 			log.Fatal(err)
-	// 		}
-
-	// 		data := make([]byte,1024)
-	// 		go s.rpcServer.ServeConn(conn)
-	// 		//fmt.Printf("complete connection")
-	// 		count,_ := conn.Read(data)
-	// 		s.ConsensusModule.receiveCommand(string(data[:count]))
 		}
 
 	 }()	
@@ -125,8 +95,6 @@ func (s *Server) ConnectToPeer(peerId int,addr string) error{
 			return err
 		}
 		s.peerServers[peerId] = client
-		//s.ConsensusModule.peerIds = append(s.ConsensusModule.peerIds,peerId)
-		//fmt.Printf("Dial")
 	}
 	return nil
 }

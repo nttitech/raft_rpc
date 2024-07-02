@@ -27,10 +27,6 @@ func makeServer(id int,serverNum int) *raft.Server{
 }
 
 func run(server *raft.Server){
-	// n :=len(servers)
-	// for i:=0;i<n;i++{
-	// 	servers[i].RunServer()
-	// }
 	server.RunServer()
 	time.Sleep(2 * time.Second)
 	var wg sync.WaitGroup

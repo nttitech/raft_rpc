@@ -64,17 +64,20 @@ func (r *RaftState) RequestVote(args RequestVoteArgs,reply *RequestVoteReply) er
 func (r *RaftState) AppendEntry(args AppendEntryArgs,reply *AppendEntryReply) error{
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	// if r.crash {
+	// 	time.Sleep(10000*time.Millisecond)
+	// }
 	if args.Entries != nil{
 		if r.checkConsistensy(args){
-			r.log = append(r.log)
+			consistentLog := r.log[:args.PrevLogIndex + 1]
+			r.log = append(consistentLog,args.Entries...)
 			reply.Success = true
+			r.dlog("has log entry:%v",r.log)
 		}else{
 			reply.Success = false
+			r.dlog("has log entry:%v",r.log)
 		}
 		return nil
-	}
-	if r.crash {
-		return fmt.Errorf("server is temporarily unavailable")
 	}
 
 	if args.Term > r.currentTerm{

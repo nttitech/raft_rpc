@@ -20,20 +20,20 @@ func (r *RaftState) becomeLeader(){
 	go func() {
 		ticker := time.NewTicker(50 * time.Millisecond)
 		defer ticker.Stop()
-		//startTime := time.Now()
+		startTime := time.Now()
 
 		for {
 			r.LeaderSendHeartbeats()
 			<-ticker.C
-			// elapsed := time.Since(startTime)
-			// if elapsed > 500*time.Millisecond{
-			// 	r.dlog("sleep")
-			// 	r.crash = true
-			// 	time.Sleep(time.Millisecond * 1001)
-			// 	r.dlog("active")
-			// 	r.crash = false
-			// 	startTime = time.Now()
-			// }
+			elapsed := time.Since(startTime)
+			if elapsed > 10000*time.Millisecond && r.currentTerm == 1{
+				r.dlog("sleep")
+				r.crash = true
+				time.Sleep(time.Millisecond * 10000)
+				r.dlog("active")
+				r.crash = false
+				startTime = time.Now()
+			}
 
 			// r.mu.Lock()
 			// defer r.mu.Unlock()
@@ -52,6 +52,11 @@ func (r *RaftState) becomeFollower(currentTerm int){
 	r.votedFor = -1
 	r.role = Follower
 	r.electionResetEvent = time.Now()
+	for{
+		if !r.crash{
+			break
+		}
+	}
 	r.dlog("is follower at Term %d",r.currentTerm)
 	go r.runElectionTimer()
 }
