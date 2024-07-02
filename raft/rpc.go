@@ -3,6 +3,7 @@ package raft
 import(
 	"time"
 	"fmt"
+	"errors"
 )
 
 type RequestVoteArgs struct{
@@ -64,9 +65,9 @@ func (r *RaftState) RequestVote(args RequestVoteArgs,reply *RequestVoteReply) er
 func (r *RaftState) AppendEntry(args AppendEntryArgs,reply *AppendEntryReply) error{
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	// if r.crash {
-	// 	time.Sleep(10000*time.Millisecond)
-	// }
+	if r.crash {
+		return errors.New("server is crashed")
+	}
 	if args.Entries != nil{
 		if r.checkConsistensy(args){
 			consistentLog := r.log[:args.PrevLogIndex + 1]
@@ -75,7 +76,7 @@ func (r *RaftState) AppendEntry(args AppendEntryArgs,reply *AppendEntryReply) er
 			r.dlog("has log entry:%v",r.log)
 		}else{
 			reply.Success = false
-			r.dlog("has log entry:%v",r.log)
+			r.dlog("has log entry:%v.It is not consistent",r.log)
 		}
 		return nil
 	}

@@ -149,6 +149,7 @@ func (r *RaftState) LeaderSendHeartbeats(){
 
 func (r *RaftState) ReceiveCommand(command *string,reply *string) error{
 	if r.role == Leader{
+		r.dlog("receive command:%s",*command)
 		LogEntry := LogEntry{
 			Term:r.currentTerm,
 			Command:*command,
@@ -156,7 +157,8 @@ func (r *RaftState) ReceiveCommand(command *string,reply *string) error{
 		r.log = append(r.log,LogEntry)
 		r.dlog("has log entry:%v",r.log)
 		for _,peerId := range r.peerIds{
-			args := &AppendEntryArgs{
+			go func(peerId int){
+				args := &AppendEntryArgs{
 				Term:r.currentTerm,
 				LeaderId:r.id,
 				PrevLogIndex:len(r.log)-2,
@@ -173,7 +175,8 @@ func (r *RaftState) ReceiveCommand(command *string,reply *string) error{
 			for {
 				err:=r.server.Call(peerId,"ConsensusModule.AppendEntry",args,&reply)
 				if err !=nil {
-					//r.dlog("AppendEntry fail from %d",peerId)
+					r.dlog("AppendEntry to %d fail",peerId)
+					break;
 				}
 				if reply.Success{
 					r.nextIndex[peerId] += 1
@@ -183,10 +186,14 @@ func (r *RaftState) ReceiveCommand(command *string,reply *string) error{
 				}else{
 					args.PrevLogIndex -= 1
 					args.PrevLogTerm = r.log[args.PrevLogIndex].Term
-					args.Entries = r.log[r.nextIndex[peerId]:]
+					args.Entries = r.log[r.nextIndex[peerId]+1:]
 					r.nextIndex[peerId] -= 1
+					//r.dlog("nextIndex:%d",r.nextIndex[peerId])
+					r.dlog("try again AppendEntry to %d",peerId)
 				}
 			}
+		
+		}(peerId)
 		}
 	}
 	return nil
@@ -197,7 +204,7 @@ func(r *RaftState) checkConsistensy(args AppendEntryArgs) bool{
 		return true
 	}
 
-	if args.PrevLogIndex != len(r.log) - 1{
+	if args.PrevLogIndex < len(r.log) - 1{
 		return false
 	}
 
